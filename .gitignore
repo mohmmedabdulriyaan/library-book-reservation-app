@@ -1,0 +1,20 @@
+# Installed packages (anyone can get them back with "npm install")
+node_modules/
+
+# Secrets: passwords and keys stay on your laptop only
+.env
+
+# Build output (made again with "npm run build" / "npm run dist")
+dist/
+dev-dist/
+
+# Old PDF folder (PDFs are now saved in MongoDB)
+backend/uploads/
+build/
+!desktop/build/
+release/
+
+# Logs and system files
+npm-debug.log*
+.DS_Store
+Thumbs.db

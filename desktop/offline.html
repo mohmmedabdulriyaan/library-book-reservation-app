@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>College Library</title>
+    <style>
+      body {
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0b0c12;
+        color: #e5e7eb;
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+      .card {
+        max-width: 420px;
+        padding: 32px;
+        border-radius: 20px;
+        background: #14161f;
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        text-align: center;
+      }
+      .logo {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 16px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #8b7bff, #5b8cff);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+      }
+      h1 { font-size: 20px; margin: 0 0 8px; }
+      p { color: #9ca3af; font-size: 14px; line-height: 1.5; margin: 0 0 8px; }
+      code { color: #c4b5fd; }
+      .spinner {
+        width: 22px;
+        height: 22px;
+        margin: 16px auto;
+        border: 3px solid rgba(255, 255, 255, 0.15);
+        border-top-color: #8b7bff;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      button {
+        border: 0;
+        padding: 10px 22px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #8b7bff, #5b8cff);
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="logo">📚</div>
+      <h1>Connecting to the library…</h1>
+      <p>Could not open <code id="url"></code></p>
+      <p id="hint"></p>
+      <div class="spinner"></div>
+      <p>Trying again automatically.</p>
+      <button onclick="window.desktop && window.desktop.retry()">Try now</button>
+    </div>
+    <script>
+      const url = new URLSearchParams(location.search).get("url") || "";
+      document.getElementById("url").textContent = url;
+      document.getElementById("hint").textContent = url.includes("localhost")
+        ? "Start the backend first: open the backend folder and run npm start (MongoDB must be running)."
+        : "Check your internet. A free server can take up to a minute to wake up.";
+    </script>
+  </body>
+</html>

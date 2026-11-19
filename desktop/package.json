@@ -1,0 +1,47 @@
+{
+  "name": "college-library-desktop",
+  "productName": "College Library",
+  "version": "1.0.0",
+  "description": "Desktop app (Windows .exe) for the Library Book Reservation App",
+  "main": "main.js",
+  "author": "Sumair",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "44.10.2",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "com.college.library",
+    "productName": "College Library",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "config.json",
+      "offline.html",
+      "build/icon.png"
+    ],
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "College Library"
+    },
+    "portable": {
+      "artifactName": "College-Library-Portable.exe"
+    }
+  }
+}

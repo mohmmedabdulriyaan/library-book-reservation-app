@@ -1,0 +1,29 @@
+# Render.com "Blueprint": deploys the whole app as ONE free web service.
+# The backend builds the frontend and serves it, so one HTTPS link
+# works on phones (installable app), laptops and the desktop .exe.
+services:
+  - type: web
+    name: college-library
+    runtime: node
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build && cd ../backend && npm install
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: MONGO_URI
+        sync: false # paste your MongoDB Atlas connection string when Render asks
+      - key: JWT_SECRET
+        generateValue: true # Render makes a long random secret for you
+      # Optional: email reminders (leave empty to keep emails off)
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
