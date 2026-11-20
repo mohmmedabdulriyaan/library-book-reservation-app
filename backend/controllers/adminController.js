@@ -328,7 +328,7 @@ const getStudents = asyncHandler(async (req, res) => {
     filter.$or = [{ name: regex }, { rollNumber: regex }];
   }
 
-  const students = await Student.find(filter).select("-password").sort({ resetRequestedAt: -1, rollNumber: 1 });
+  const students = await Student.find(filter).select("-password").sort({ rollNumber: 1 });
 
   // Count active books and total borrowed for each student
   const counts = await Reservation.aggregate([
@@ -377,7 +377,8 @@ const getStudentById = asyncHandler(async (req, res) => {
 
 // @route  PUT /api/admin/students/:id/reset-password
 // @access Admin
-// Gives the student a new temporary password, shown once to the admin
+// Backup if a student forgot both password and security answer:
+// gives a new temporary password, shown once to the admin
 const resetStudentPassword = asyncHandler(async (req, res) => {
   const student = await Student.findById(req.params.id);
   if (!student) {
@@ -388,7 +389,6 @@ const resetStudentPassword = asyncHandler(async (req, res) => {
   // Easy to read out at the counter: e.g. "lib-4821"
   const tempPassword = `lib-${crypto.randomInt(1000, 10000)}`;
   student.password = tempPassword; // hashed again by the model
-  student.resetRequestedAt = null;
   await student.save();
 
   await notifyStudent(

@@ -121,7 +121,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Test Student\",\n  \"rollNumber\": \"2503A51133\",\n  \"batch\": 2,\n  \"email\": \"test@example.com\",\n  \"password\": \"student123\"\n}",
+              "raw": "{\n  \"name\": \"Test Student\",\n  \"rollNumber\": \"2503A51133\",\n  \"batch\": 2,\n  \"email\": \"test@example.com\",\n  \"password\": \"student123\",\n  \"securityQuestion\": \"What is the name of your college?\",\n  \"securityAnswer\": \"SR University\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2679,9 +2679,9 @@
           ]
         },
         {
-          "name": "Forgot password (student asks for reset)",
+          "name": "Set my security question (student)",
           "request": {
-            "method": "POST",
+            "method": "PUT",
             "header": [
               {
                 "key": "Content-Type",
@@ -2689,22 +2689,28 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/auth/student/forgot-password",
+              "raw": "{{baseUrl}}/auth/security-question",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "auth",
-                "student",
-                "forgot-password"
+                "security-question"
               ]
             },
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"rollNumber\": \"2503A51133\",\n  \"batch\": 2\n}",
+              "raw": "{\n  \"currentPassword\": \"student123\",\n  \"question\": \"What is the name of your college?\",\n  \"answer\": \"SR University\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2719,55 +2725,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Tells student to visit the counter\", () => pm.expect(pm.response.json().message).to.include(\"library counter\"));"
+                  "pm.test(\"Question is set\", () => pm.expect(pm.response.json().user.hasSecurityQuestion).to.eql(true));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Students list shows the reset request",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/admin/students",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "admin",
-                "students"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "const s = pm.response.json().students.find(x => x.rollNumber === \"2503A51133\");",
-                  "pm.test(\"Reset requested is set\", () => pm.expect(s.resetRequestedAt).to.be.ok);",
-                  "pm.collectionVariables.set(\"studentId\", s._id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Reset student password (admin)",
+          "name": "Admin reset student password (backup)",
           "request": {
             "method": "PUT",
             "header": [],
@@ -2801,16 +2766,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "const temp = pm.response.json().tempPassword;",
-                  "pm.test(\"Gives a temporary password\", () => pm.expect(temp).to.match(/^lib-\\d{4}$/));",
-                  "pm.collectionVariables.set(\"tempPassword\", temp);"
+                  "pm.test(\"Gives a temporary password\", () => pm.expect(pm.response.json().tempPassword).to.match(/^lib-\\d{4}$/));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Login with the temporary password",
+          "name": "Forgot password: get my question",
           "request": {
             "method": "POST",
             "header": [
@@ -2820,14 +2783,15 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/auth/student/login",
+              "raw": "{{baseUrl}}/auth/student/forgot-password/question",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "auth",
                 "student",
-                "login"
+                "forgot-password",
+                "question"
               ]
             },
             "auth": {
@@ -2835,7 +2799,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"rollNumber\": \"2503A51133\",\n  \"password\": \"{{tempPassword}}\"\n}",
+              "raw": "{\n  \"rollNumber\": \"2503A51133\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2850,6 +2814,102 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Shows the question\", () => pm.expect(pm.response.json().question).to.include(\"college\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forgot password: wrong answer (should fail)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/student/forgot-password/reset",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "student",
+                "forgot-password",
+                "reset"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rollNumber\": \"2503A51133\",\n  \"answer\": \"wrong\",\n  \"newPassword\": \"newpass123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forgot password: right answer sets new password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/student/forgot-password/reset",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "student",
+                "forgot-password",
+                "reset"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rollNumber\": \"2503A51133\",\n  \"answer\": \"sr university\",\n  \"newPassword\": \"newpass123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Logged in with a token\", () => pm.expect(pm.response.json().token).to.be.a(\"string\"));",
                   "pm.collectionVariables.set(\"studentToken\", pm.response.json().token);"
                 ]
               }
@@ -2888,7 +2948,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"currentPassword\": \"{{tempPassword}}\",\n  \"newPassword\": \"student123\"\n}",
+              "raw": "{\n  \"currentPassword\": \"newpass123\",\n  \"newPassword\": \"student123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

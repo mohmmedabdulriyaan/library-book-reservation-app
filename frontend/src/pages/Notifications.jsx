@@ -15,7 +15,6 @@ const ICONS = {
   info: { icon: "bi-info-circle", tint: "tint-info" },
   announcement: { icon: "bi-megaphone", tint: "tint-info" },
   request: { icon: "bi-lightbulb", tint: "tint-warning" },
-  password_reset: { icon: "bi-key", tint: "tint-warning" },
 };
 
 // "5 min ago", "2 h ago", "3 days ago"

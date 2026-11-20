@@ -203,7 +203,9 @@ Base URL: `http://localhost:5000/api`
 | GET | `/auth/me` | Logged in | My profile |
 | PUT | `/auth/me` | Student | Update `name, batch, email` |
 | PUT | `/auth/change-password` | Logged in | `currentPassword, newPassword` |
-| POST | `/auth/student/forgot-password` | Public | `rollNumber, batch` (asks the librarian for a new password) |
+| POST | `/auth/student/forgot-password/question` | Public | `rollNumber` (returns the security question) |
+| POST | `/auth/student/forgot-password/reset` | Public | `rollNumber, answer, newPassword` (logs the student in) |
+| PUT | `/auth/security-question` | Student | `currentPassword, question, answer` |
 
 ### Books
 
@@ -239,7 +241,7 @@ Base URL: `http://localhost:5000/api`
 | GET | `/admin/books/:id/reservations` | Who has this book now + waitlist + history |
 | GET | `/admin/students` | All students with how many books they hold (`?search=&batch=`) |
 | GET | `/admin/students/:id` | One student and all their reservations |
-| PUT | `/admin/students/:id/reset-password` | Gives the student a new temporary password (e.g. `lib-4821`) |
+| PUT | `/admin/students/:id/reset-password` | Backup: gives the student a temporary password (e.g. `lib-4821`) |
 
 ### Waitlist (student)
 

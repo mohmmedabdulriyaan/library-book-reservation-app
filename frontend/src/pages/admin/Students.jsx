@@ -40,12 +40,10 @@ function ResetPassword({ student, onDone }) {
   }
 
   return (
-    <div className={`app-card p-3 mb-3 ${student.resetRequestedAt ? "border border-warning" : ""}`}>
-      {student.resetRequestedAt && (
-        <div className="small text-warning fw-semibold mb-2">
-          <i className="bi bi-key me-1"></i>Asked for a new password on {formatDate(student.resetRequestedAt)}
-        </div>
-      )}
+    <div className="app-card p-3 mb-3">
+      <div className="small text-secondary mb-2">
+        Students reset their own password with their security question. Use this only if they forgot that too.
+      </div>
       {error && <div className="alert alert-danger py-2 small">{error}</div>}
       <button className="btn btn-light w-100" onClick={reset} disabled={busy}>
         {busy ? <span className="spinner-border spinner-border-sm"></span> : <><i className="bi bi-arrow-repeat me-2"></i>Reset password</>}
@@ -151,19 +149,10 @@ export default function Students() {
       .finally(() => setLoading(false));
   }, [search, batch, reload]);
 
-  const resetRequests = students.filter((s) => s.resetRequestedAt).length;
-
   return (
     <>
       <h1 className="page-title">Students</h1>
       <p className="page-sub">{students.length} students signed up.</p>
-
-      {resetRequests > 0 && (
-        <div className="alert alert-warning small d-flex align-items-center gap-2">
-          <i className="bi bi-key"></i>
-          {resetRequests} {resetRequests === 1 ? "student has" : "students have"} forgotten their password. Open the student and tap Reset password.
-        </div>
-      )}
 
       <div className="row g-2 mb-3">
         <div className="col-9">
@@ -202,11 +191,6 @@ export default function Students() {
                   <div className="small text-secondary">
                     {s.rollNumber} · Batch {s.batch}
                   </div>
-                  {s.resetRequestedAt && (
-                    <span className="badge-soft tint-warning mt-1 d-inline-block">
-                      <i className="bi bi-key me-1"></i>Password reset requested
-                    </span>
-                  )}
                   <div className="small mt-1">
                     <span className={s.activeBooks > 0 ? "text-primary fw-semibold" : "text-secondary"}>
                       {s.activeBooks} holding

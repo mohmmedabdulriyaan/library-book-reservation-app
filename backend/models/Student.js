@@ -31,11 +31,18 @@ const studentSchema = new mongoose.Schema(
       required: [true, "Password is required"],
       minlength: [6, "Password must be at least 6 characters"],
     },
-    // Set when the student taps "Forgot password". The admin then resets it.
-    resetRequestedAt: {
-      type: Date,
-      default: null,
+    // Used on "Forgot password": the student answers this to set a new password
+    securityQuestion: {
+      type: String,
+      trim: true,
     },
+    securityAnswer: {
+      type: String, // saved hashed, like the password
+      select: false, // never sent back in any API response
+    },
+    // Wrong answers on "Forgot password" (locked for 15 min after 5 wrong tries)
+    resetFailCount: { type: Number, default: 0 },
+    resetLockedUntil: { type: Date, default: null },
   },
   { timestamps: true } // adds createdAt and updatedAt
 );
@@ -47,6 +54,23 @@ studentSchema.pre("save", async function (next) {
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
+
+// Answers are compared in lower case without extra spaces ("  Hyderabad " = "hyderabad")
+const cleanAnswer = (answer) => String(answer || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+// Hash the security answer before saving (only when it is new or changed)
+studentSchema.pre("save", async function (next) {
+  if (!this.isModified("securityAnswer") || !this.securityAnswer) return next();
+  const salt = await bcrypt.genSalt(10);
+  this.securityAnswer = await bcrypt.hash(cleanAnswer(this.securityAnswer), salt);
+  next();
+});
+
+// Check an answer (load the student with .select("+securityAnswer") first)
+studentSchema.methods.matchAnswer = function (answer) {
+  if (!this.securityAnswer) return false;
+  return bcrypt.compare(cleanAnswer(answer), this.securityAnswer);
+};
 
 // Check a plain password against the hashed one (used at login)
 studentSchema.methods.matchPassword = function (enteredPassword) {

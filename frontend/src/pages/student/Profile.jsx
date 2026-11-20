@@ -7,6 +7,7 @@ import { getInitials } from "../../layouts/AppLayout";
 import PasswordInput from "../../components/PasswordInput";
 import ThemeToggle from "../../components/ThemeToggle";
 import { Link } from "react-router-dom";
+import SECURITY_QUESTIONS from "../../utils/securityQuestions";
 
 export default function Profile() {
   const { user, logout, updateUser } = useAuth();
@@ -17,6 +18,28 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: user.name, batch: user.batch, email: user.email || "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [questionForm, setQuestionForm] = useState({ currentPassword: "", question: SECURITY_QUESTIONS[0], answer: "" });
+
+  const saveQuestion = async (e) => {
+    e.preventDefault();
+    if (!questionForm.answer.trim()) return toast.error("Please type an answer");
+    setSaving(true);
+    try {
+      const { data } = await api.put("/auth/security-question", {
+        currentPassword: questionForm.currentPassword,
+        question: questionForm.question,
+        answer: questionForm.answer.trim(),
+      });
+      updateUser(data.user);
+      toast.success("Security question saved");
+      setQuestionForm({ currentPassword: "", question: SECURITY_QUESTIONS[0], answer: "" });
+      setSection(null);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const toggle = (name) => setSection(section === name ? null : name);
 
@@ -186,6 +209,55 @@ export default function Profile() {
             </div>
             <button className="btn btn-primary w-100" disabled={saving}>
               {saving ? <span className="spinner-border spinner-border-sm"></span> : "Change password"}
+            </button>
+          </form>
+        )}
+
+        {/* Security question (used on "Forgot password") */}
+        <button className="list-row" onClick={() => toggle("question")}>
+          <i className="bi bi-shield-lock text-primary"></i>
+          <span className="fw-semibold">Security question</span>
+          {!user.hasSecurityQuestion && <span className="badge-soft tint-warning ms-2">Not set</span>}
+          <i className={`bi ${section === "question" ? "bi-chevron-down" : "bi-chevron-right"} ms-auto text-secondary`}></i>
+        </button>
+        {section === "question" && (
+          <form className="p-3" onSubmit={saveQuestion}>
+            <p className="small text-secondary">If you forget your password, you answer this to set a new one.</p>
+            <div className="mb-3">
+              <label className="form-label">Question</label>
+              <select
+                className="form-select"
+                value={questionForm.question}
+                onChange={(e) => setQuestionForm({ ...questionForm, question: e.target.value })}
+              >
+                {SECURITY_QUESTIONS.map((q) => (
+                  <option key={q}>{q}</option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-3">
+              <label className="form-label">Answer</label>
+              <input
+                className="form-control"
+                value={questionForm.answer}
+                onChange={(e) => setQuestionForm({ ...questionForm, answer: e.target.value })}
+                placeholder="Not case sensitive"
+                autoComplete="off"
+                required
+              />
+            </div>
+            <div className="mb-3">
+              <label className="form-label">Current password</label>
+              <PasswordInput
+                name="questionPassword"
+                value={questionForm.currentPassword}
+                onChange={(e) => setQuestionForm({ ...questionForm, currentPassword: e.target.value })}
+                placeholder="To confirm it's you"
+                autoComplete="current-password"
+              />
+            </div>
+            <button className="btn btn-primary w-100" disabled={saving}>
+              {saving ? <span className="spinner-border spinner-border-sm"></span> : "Save question"}
             </button>
           </form>
         )}

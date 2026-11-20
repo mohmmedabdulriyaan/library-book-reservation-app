@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { getErrorMessage } from "../../api/axios";
 import PasswordInput from "../../components/PasswordInput";
+import SECURITY_QUESTIONS from "../../utils/securityQuestions";
 
 // Same rule as the backend: 4 digits + 1 letter + 5 digits
 const ROLL_REGEX = /^[0-9]{4}[A-Z][0-9]{5}$/;
@@ -20,6 +21,8 @@ export default function StudentSignup() {
     email: "",
     password: "",
     confirmPassword: "",
+    securityQuestion: SECURITY_QUESTIONS[0],
+    securityAnswer: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -46,6 +49,9 @@ export default function StudentSignup() {
     if (form.password !== form.confirmPassword) {
       return setError("Passwords do not match");
     }
+    if (!form.securityAnswer.trim()) {
+      return setError("Please answer the security question");
+    }
 
     setLoading(true);
     try {
@@ -55,6 +61,8 @@ export default function StudentSignup() {
         batch,
         email: form.email.trim() || undefined,
         password: form.password,
+        securityQuestion: form.securityQuestion,
+        securityAnswer: form.securityAnswer.trim(),
       });
       toast.success(`Account created. Welcome, ${user.name.split(" ")[0]}!`);
       navigate("/home");
@@ -155,7 +163,7 @@ export default function StudentSignup() {
               />
             </div>
 
-            <div className="mb-4">
+            <div className="mb-3">
               <label className="form-label">Confirm password</label>
               <PasswordInput
                 name="confirmPassword"
@@ -163,6 +171,28 @@ export default function StudentSignup() {
                 onChange={handleChange}
                 placeholder="Type it again"
                 autoComplete="new-password"
+              />
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label">Security question</label>
+              <select className="form-select" name="securityQuestion" value={form.securityQuestion} onChange={handleChange}>
+                {SECURITY_QUESTIONS.map((q) => (
+                  <option key={q}>{q}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="form-label">Answer</label>
+              <input
+                className="form-control"
+                name="securityAnswer"
+                value={form.securityAnswer}
+                onChange={handleChange}
+                placeholder="You need this if you forget your password"
+                autoComplete="off"
+                required
               />
             </div>
 

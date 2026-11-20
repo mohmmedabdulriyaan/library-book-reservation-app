@@ -69,7 +69,7 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const value = { user, loading, loginStudent, registerStudent, loginAdmin, logout, updateUser };
+  const value = { user, loading, loginStudent, registerStudent, loginAdmin, logout, updateUser, saveLogin };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

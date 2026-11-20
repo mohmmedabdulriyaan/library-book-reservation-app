@@ -1,27 +1,56 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api, { getErrorMessage } from "../../api/axios";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
+import PasswordInput from "../../components/PasswordInput";
 
-// Student forgot their password: they send roll number + batch,
-// then collect a new password from the librarian (no email needed).
+// Forgot password in 2 steps:
+// 1. Enter roll number -> we show your security question
+// 2. Answer it and choose a new password -> you are logged in
 export default function ForgotPassword() {
-  const [form, setForm] = useState({ rollNumber: "", batch: "" });
+  const { saveLogin } = useAuth();
+  const toast = useToast();
+  const navigate = useNavigate();
+
+  const [rollNumber, setRollNumber] = useState("");
+  const [question, setQuestion] = useState("");
+  const [form, setForm] = useState({ answer: "", newPassword: "", confirmPassword: "" });
   const [error, setError] = useState("");
-  const [done, setDone] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
+  const findQuestion = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const { data } = await api.post("/auth/student/forgot-password", {
-        rollNumber: form.rollNumber.trim(),
-        batch: Number(form.batch),
+      const { data } = await api.post("/auth/student/forgot-password/question", { rollNumber: rollNumber.trim() });
+      setQuestion(data.question);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (form.newPassword.length < 6) return setError("New password must be at least 6 characters");
+    if (form.newPassword !== form.confirmPassword) return setError("New passwords do not match");
+
+    setLoading(true);
+    try {
+      const { data } = await api.post("/auth/student/forgot-password/reset", {
+        rollNumber: rollNumber.trim(),
+        answer: form.answer,
+        newPassword: form.newPassword,
       });
-      setDone(data.message);
+      saveLogin(data.token, data.user);
+      toast.success("Password changed. You are logged in.");
+      navigate("/home");
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -41,67 +70,89 @@ export default function ForgotPassword() {
             <i className="bi bi-key"></i>
           </span>
           <h1 className="auth-title">Forgot password</h1>
-          <p className="auth-sub">Tell us who you are. The librarian will give you a new password.</p>
+          <p className="auth-sub">
+            {question ? "Answer your security question and choose a new password." : "Enter your roll number to get started."}
+          </p>
 
-          {done ? (
-            <>
-              <div className="alert alert-success small d-flex gap-2">
-                <i className="bi bi-check-circle"></i>
-                <span>{done}</span>
-              </div>
-              <ol className="small text-secondary ps-3 mb-4">
-                <li>Go to the library counter with your college ID card.</li>
-                <li>The librarian gives you a new password.</li>
-                <li>Log in and change it in Profile &gt; Change password.</li>
-              </ol>
-              <Link to="/login" className="btn btn-primary w-100">
-                Back to login
-              </Link>
-            </>
-          ) : (
-            <>
-              {error && (
-                <div className="alert alert-danger py-2 small d-flex align-items-center gap-2">
-                  <i className="bi bi-exclamation-circle"></i> {error}
-                </div>
-              )}
+          {error && (
+            <div className="alert alert-danger py-2 small d-flex align-items-center gap-2">
+              <i className="bi bi-exclamation-circle"></i> {error}
+            </div>
+          )}
 
-              <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                  <label className="form-label">Roll number</label>
-                  <div className="input-icon">
-                    <i className="bi bi-person-badge"></i>
-                    <input
-                      className="form-control text-uppercase"
-                      name="rollNumber"
-                      value={form.rollNumber}
-                      onChange={handleChange}
-                      placeholder="e.g. 2503A51133"
-                      autoComplete="username"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <label className="form-label">Batch</label>
+          {!question ? (
+            <form onSubmit={findQuestion}>
+              <div className="mb-4">
+                <label className="form-label">Roll number</label>
+                <div className="input-icon">
+                  <i className="bi bi-person-badge"></i>
                   <input
-                    type="number"
-                    min={1}
-                    className="form-control"
-                    name="batch"
-                    value={form.batch}
-                    onChange={handleChange}
-                    placeholder="e.g. 2"
+                    className="form-control text-uppercase"
+                    value={rollNumber}
+                    onChange={(e) => setRollNumber(e.target.value)}
+                    placeholder="e.g. 2503A51133"
+                    autoComplete="username"
                     required
                   />
                 </div>
+              </div>
+              <button className="btn btn-primary w-100" disabled={loading}>
+                {loading ? <span className="spinner-border spinner-border-sm"></span> : "Next"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={resetPassword}>
+              <div className="app-card p-3 mb-3 small">
+                <div className="text-secondary mb-1">Security question</div>
+                <div className="fw-semibold">{question}</div>
+              </div>
 
-                <button className="btn btn-primary w-100" disabled={loading}>
-                  {loading ? <span className="spinner-border spinner-border-sm"></span> : "Send request"}
-                </button>
-              </form>
-            </>
+              <div className="mb-3">
+                <label className="form-label">Your answer</label>
+                <input
+                  className="form-control"
+                  name="answer"
+                  value={form.answer}
+                  onChange={handleChange}
+                  placeholder="Not case sensitive"
+                  autoComplete="off"
+                  required
+                />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">New password</label>
+                <PasswordInput
+                  name="newPassword"
+                  value={form.newPassword}
+                  onChange={handleChange}
+                  placeholder="At least 6 characters"
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="form-label">Confirm new password</label>
+                <PasswordInput
+                  name="confirmPassword"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Type it again"
+                  autoComplete="new-password"
+                />
+              </div>
+              <button className="btn btn-primary w-100" disabled={loading}>
+                {loading ? <span className="spinner-border spinner-border-sm"></span> : "Reset password"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-link w-100 small mt-2 text-decoration-none"
+                onClick={() => {
+                  setQuestion("");
+                  setError("");
+                }}
+              >
+                Use a different roll number
+              </button>
+            </form>
           )}
         </div>
       </div>

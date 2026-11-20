@@ -2,7 +2,6 @@ const asyncHandler = require("../utils/asyncHandler");
 const generateToken = require("../utils/generateToken");
 const Student = require("../models/Student");
 const Admin = require("../models/Admin");
-const { notifyAdmin } = require("../services/notify");
 
 // Roll number format: 4 digits + 1 letter + 5 digits (e.g. 2503A51133)
 const ROLL_REGEX = /^[0-9]{4}[A-Z][0-9]{5}$/;
@@ -14,6 +13,7 @@ const studentData = (s) => ({
   rollNumber: s.rollNumber,
   batch: s.batch,
   email: s.email,
+  hasSecurityQuestion: Boolean(s.securityQuestion),
   role: "student",
   createdAt: s.createdAt,
 });
@@ -28,11 +28,15 @@ const adminData = (a) => ({
 // @route  POST /api/auth/student/register
 // @access Public
 const registerStudent = asyncHandler(async (req, res) => {
-  const { name, rollNumber, batch, email, password } = req.body;
+  const { name, rollNumber, batch, email, password, securityQuestion, securityAnswer } = req.body;
 
   if (!name || !rollNumber || !batch || !password) {
     res.status(400);
     throw new Error("Name, roll number, batch and password are required");
+  }
+  if (!securityQuestion || !securityAnswer) {
+    res.status(400);
+    throw new Error("Please choose a security question and answer (used if you forget your password)");
   }
 
   const roll = String(rollNumber).trim().toUpperCase();
@@ -53,6 +57,8 @@ const registerStudent = asyncHandler(async (req, res) => {
     batch: Number(batch),
     email,
     password, // hashed automatically by the Student model
+    securityQuestion,
+    securityAnswer, // hashed too
   });
 
   res.status(201).json({
@@ -79,12 +85,6 @@ const loginStudent = asyncHandler(async (req, res) => {
     throw new Error("Wrong roll number or password");
   }
 
-  // They remembered it after all, so drop any open reset request
-  if (student.resetRequestedAt) {
-    student.resetRequestedAt = null;
-    await student.save();
-  }
-
   res.json({
     message: "Logged in",
     token: generateToken(student._id, "student"),
@@ -92,39 +92,97 @@ const loginStudent = asyncHandler(async (req, res) => {
   });
 });
 
-// @route  POST /api/auth/student/forgot-password
+// @route  POST /api/auth/student/forgot-password/question
 // @access Public
-// The student sends roll number + batch. The admin sees the request and gives
-// a new temporary password at the library counter (works without email).
-const forgotPassword = asyncHandler(async (req, res) => {
-  const { rollNumber, batch } = req.body;
-
-  if (!rollNumber || !batch) {
+// Step 1 of "Forgot password": shows the student's security question
+const getSecurityQuestion = asyncHandler(async (req, res) => {
+  const roll = String(req.body.rollNumber || "").trim().toUpperCase();
+  if (!roll) {
     res.status(400);
-    throw new Error("Roll number and batch are required");
+    throw new Error("Roll number is required");
   }
 
-  const student = await Student.findOne({ rollNumber: String(rollNumber).trim().toUpperCase() });
+  const student = await Student.findOne({ rollNumber: roll });
+  if (!student) {
+    res.status(404);
+    throw new Error("No account found with this roll number");
+  }
+  if (!student.securityQuestion) {
+    res.status(400);
+    throw new Error("This account has no security question yet. Ask the librarian to reset your password.");
+  }
 
-  // Same answer either way, so nobody can find out which roll numbers exist
-  if (student && student.batch === Number(batch)) {
-    const alreadyAsked = Boolean(student.resetRequestedAt);
-    student.resetRequestedAt = new Date();
-    await student.save();
+  res.json({ question: student.securityQuestion });
+});
 
-    if (!alreadyAsked) {
-      await notifyAdmin(
-        "password_reset",
-        "Password reset request",
-        `${student.name} (${student.rollNumber}, Batch ${student.batch}) forgot their password.`,
-        "/admin/students"
-      );
+// @route  POST /api/auth/student/forgot-password/reset
+// @access Public
+// Step 2: correct answer -> new password, and the student is logged in
+const resetPasswordWithAnswer = asyncHandler(async (req, res) => {
+  const { rollNumber, answer, newPassword } = req.body;
+  if (!rollNumber || !answer || !newPassword) {
+    res.status(400);
+    throw new Error("Roll number, answer and new password are required");
+  }
+  if (String(newPassword).length < 6) {
+    res.status(400);
+    throw new Error("New password must be at least 6 characters");
+  }
+
+  const student = await Student.findOne({ rollNumber: String(rollNumber).trim().toUpperCase() }).select("+securityAnswer");
+  if (!student || !student.securityQuestion) {
+    res.status(400);
+    throw new Error("Cannot reset the password for this account");
+  }
+
+  if (student.resetLockedUntil && student.resetLockedUntil > new Date()) {
+    res.status(429);
+    throw new Error("Too many wrong answers. Try again in 15 minutes.");
+  }
+
+  if (!(await student.matchAnswer(answer))) {
+    student.resetFailCount += 1;
+    if (student.resetFailCount >= 5) {
+      student.resetFailCount = 0;
+      student.resetLockedUntil = new Date(Date.now() + 15 * 60 * 1000);
     }
+    await student.save();
+    res.status(400);
+    throw new Error("Wrong answer");
   }
+
+  student.password = newPassword; // hashed by the model
+  student.resetFailCount = 0;
+  student.resetLockedUntil = null;
+  await student.save();
 
   res.json({
-    message: "Request sent. Visit the library counter with your college ID card to get a new password.",
+    message: "Password changed",
+    token: generateToken(student._id, "student"),
+    user: studentData(student),
   });
+});
+
+// @route  PUT /api/auth/security-question
+// @access Student
+// Set or change the security question (needs the current password)
+const updateSecurityQuestion = asyncHandler(async (req, res) => {
+  const { currentPassword, question, answer } = req.body;
+  if (!currentPassword || !question || !answer) {
+    res.status(400);
+    throw new Error("Current password, question and answer are required");
+  }
+
+  const student = await Student.findById(req.user._id);
+  if (!(await student.matchPassword(currentPassword))) {
+    res.status(400);
+    throw new Error("Current password is wrong");
+  }
+
+  student.securityQuestion = question;
+  student.securityAnswer = answer; // hashed by the model
+  await student.save();
+  res.json({ message: "Security question saved", user: studentData(student) });
 });
 
 // @route  POST /api/auth/admin/login
@@ -199,7 +257,9 @@ const changePassword = asyncHandler(async (req, res) => {
 module.exports = {
   registerStudent,
   loginStudent,
-  forgotPassword,
+  getSecurityQuestion,
+  resetPasswordWithAnswer,
+  updateSecurityQuestion,
   loginAdmin,
   getMe,
   updateProfile,

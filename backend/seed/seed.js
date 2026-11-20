@@ -105,7 +105,12 @@ const seed = async () => {
   // Remove old copies of the demo students, then create them again
   await Student.deleteMany({ rollNumber: { $in: demoStudents.map((s) => s.rollNumber) } });
   const created = await Student.create(
-    demoStudents.map(({ loans, ...s }) => ({ ...s, password: DEMO_PASSWORD })) // password is hashed by the model
+    demoStudents.map(({ loans, ...s }) => ({
+      ...s,
+      password: DEMO_PASSWORD, // password is hashed by the model
+      securityQuestion: "What is the name of your college?",
+      securityAnswer: "SR University", // demo answer for "Forgot password"
+    }))
   );
   console.log(`Created ${created.length} demo students (password: ${DEMO_PASSWORD})`);
 
