@@ -4,6 +4,8 @@ A college project where students can search and reserve library books, and an ad
 
 **Stack:** React (Vite) + Bootstrap, Node.js + Express.js, MongoDB (Mongoose), tested with Postman.
 
+**Live app:** https://college-library-ieko.onrender.com (free server, the first load can take up to 50 seconds).
+
 ## Features
 
 **Students:** sign up with name, roll number and batch · search with filters · reserve a book · **pickup code + QR** to show at the counter · **waitlist** when a book is out (auto-reserved when a copy returns) · **renew** once for 7 days · due dates, overdue and **late fines** · **notification bell** · profile, password, **dark mode**.
