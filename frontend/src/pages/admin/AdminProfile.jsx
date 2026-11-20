@@ -1,4 +1,7 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api, { getErrorMessage } from "../../api/axios";
+import PasswordInput from "../../components/PasswordInput";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { getInitials } from "../../layouts/AppLayout";
@@ -9,6 +12,30 @@ export default function AdminProfile() {
   const { user, logout } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+
+  const savePassword = async (e) => {
+    e.preventDefault();
+    if (form.newPassword.length < 6) return toast.error("New password must be at least 6 characters");
+    if (form.newPassword !== form.confirmPassword) return toast.error("New passwords do not match");
+
+    setSaving(true);
+    try {
+      await api.put("/auth/change-password", {
+        currentPassword: form.currentPassword,
+        newPassword: form.newPassword,
+      });
+      toast.success("Password changed");
+      setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setShowPassword(false);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -40,6 +67,51 @@ export default function AdminProfile() {
             <i className="bi bi-chevron-right ms-auto text-secondary"></i>
           </Link>
         ))}
+      </div>
+
+      <div className="app-card mb-3">
+        <button className="list-row" onClick={() => setShowPassword(!showPassword)}>
+          <i className="bi bi-key text-primary"></i>
+          <span className="fw-semibold">Change password</span>
+          <i className={`bi ${showPassword ? "bi-chevron-down" : "bi-chevron-right"} ms-auto text-secondary`}></i>
+        </button>
+        {showPassword && (
+          <form className="p-3" onSubmit={savePassword}>
+            <div className="mb-3">
+              <label className="form-label">Current password</label>
+              <PasswordInput
+                name="currentPassword"
+                value={form.currentPassword}
+                onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
+                placeholder="Current password"
+                autoComplete="current-password"
+              />
+            </div>
+            <div className="mb-3">
+              <label className="form-label">New password</label>
+              <PasswordInput
+                name="newPassword"
+                value={form.newPassword}
+                onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
+                placeholder="At least 6 characters"
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="mb-3">
+              <label className="form-label">Confirm new password</label>
+              <PasswordInput
+                name="confirmPassword"
+                value={form.confirmPassword}
+                onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                placeholder="Type it again"
+                autoComplete="new-password"
+              />
+            </div>
+            <button className="btn btn-primary w-100" disabled={saving}>
+              {saving ? <span className="spinner-border spinner-border-sm"></span> : "Change password"}
+            </button>
+          </form>
+        )}
       </div>
 
       <div className="app-card mb-3">
