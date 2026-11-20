@@ -7,6 +7,7 @@ const Reservation = require("../models/Reservation");
 const Waitlist = require("../models/Waitlist");
 const BookRequest = require("../models/BookRequest");
 const Resource = require("../models/Resource");
+const crypto = require("crypto");
 const { notifyStudent } = require("../services/notify");
 const { DAY, ACTIVE, daysLate, toClient, releaseCopy } = require("../services/library");
 const { LOAN_DAYS, FINE_PER_DAY } = require("../config/constants");
@@ -327,7 +328,7 @@ const getStudents = asyncHandler(async (req, res) => {
     filter.$or = [{ name: regex }, { rollNumber: regex }];
   }
 
-  const students = await Student.find(filter).select("-password").sort({ rollNumber: 1 });
+  const students = await Student.find(filter).select("-password").sort({ resetRequestedAt: -1, rollNumber: 1 });
 
   // Count active books and total borrowed for each student
   const counts = await Reservation.aggregate([
@@ -374,6 +375,33 @@ const getStudentById = asyncHandler(async (req, res) => {
   });
 });
 
+// @route  PUT /api/admin/students/:id/reset-password
+// @access Admin
+// Gives the student a new temporary password, shown once to the admin
+const resetStudentPassword = asyncHandler(async (req, res) => {
+  const student = await Student.findById(req.params.id);
+  if (!student) {
+    res.status(404);
+    throw new Error("Student not found");
+  }
+
+  // Easy to read out at the counter: e.g. "lib-4821"
+  const tempPassword = `lib-${crypto.randomInt(1000, 10000)}`;
+  student.password = tempPassword; // hashed again by the model
+  student.resetRequestedAt = null;
+  await student.save();
+
+  await notifyStudent(
+    student._id,
+    "info",
+    "Your password was reset",
+    "The librarian gave you a new password. Change it in Profile > Change password.",
+    "/profile"
+  );
+
+  res.json({ message: "Password reset", tempPassword });
+});
+
 module.exports = {
   getStats,
   getAllReservations,
@@ -385,4 +413,5 @@ module.exports = {
   getBookReservations,
   getStudents,
   getStudentById,
+  resetStudentPassword,
 };

@@ -2,6 +2,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const generateToken = require("../utils/generateToken");
 const Student = require("../models/Student");
 const Admin = require("../models/Admin");
+const { notifyAdmin } = require("../services/notify");
 
 // Roll number format: 4 digits + 1 letter + 5 digits (e.g. 2503A51133)
 const ROLL_REGEX = /^[0-9]{4}[A-Z][0-9]{5}$/;
@@ -78,10 +79,51 @@ const loginStudent = asyncHandler(async (req, res) => {
     throw new Error("Wrong roll number or password");
   }
 
+  // They remembered it after all, so drop any open reset request
+  if (student.resetRequestedAt) {
+    student.resetRequestedAt = null;
+    await student.save();
+  }
+
   res.json({
     message: "Logged in",
     token: generateToken(student._id, "student"),
     user: studentData(student),
+  });
+});
+
+// @route  POST /api/auth/student/forgot-password
+// @access Public
+// The student sends roll number + batch. The admin sees the request and gives
+// a new temporary password at the library counter (works without email).
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { rollNumber, batch } = req.body;
+
+  if (!rollNumber || !batch) {
+    res.status(400);
+    throw new Error("Roll number and batch are required");
+  }
+
+  const student = await Student.findOne({ rollNumber: String(rollNumber).trim().toUpperCase() });
+
+  // Same answer either way, so nobody can find out which roll numbers exist
+  if (student && student.batch === Number(batch)) {
+    const alreadyAsked = Boolean(student.resetRequestedAt);
+    student.resetRequestedAt = new Date();
+    await student.save();
+
+    if (!alreadyAsked) {
+      await notifyAdmin(
+        "password_reset",
+        "Password reset request",
+        `${student.name} (${student.rollNumber}, Batch ${student.batch}) forgot their password.`,
+        "/admin/students"
+      );
+    }
+  }
+
+  res.json({
+    message: "Request sent. Visit the library counter with your college ID card to get a new password.",
   });
 });
 
@@ -157,6 +199,7 @@ const changePassword = asyncHandler(async (req, res) => {
 module.exports = {
   registerStudent,
   loginStudent,
+  forgotPassword,
   loginAdmin,
   getMe,
   updateProfile,

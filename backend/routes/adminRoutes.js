@@ -10,6 +10,7 @@ const {
   getBookReservations,
   getStudents,
   getStudentById,
+  resetStudentPassword,
 } = require("../controllers/adminController");
 const { getLibrarySettings, updateLibrarySettings } = require("../controllers/settingsController");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
@@ -32,6 +33,7 @@ router.get("/books/:id/reservations", getBookReservations);
 
 router.get("/students", getStudents);
 router.get("/students/:id", getStudentById);
+router.put("/students/:id/reset-password", resetStudentPassword);
 
 router.get("/settings", getLibrarySettings);
 router.put("/settings", updateLibrarySettings);

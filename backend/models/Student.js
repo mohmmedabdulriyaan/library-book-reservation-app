@@ -31,6 +31,11 @@ const studentSchema = new mongoose.Schema(
       required: [true, "Password is required"],
       minlength: [6, "Password must be at least 6 characters"],
     },
+    // Set when the student taps "Forgot password". The admin then resets it.
+    resetRequestedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true } // adds createdAt and updatedAt
 );

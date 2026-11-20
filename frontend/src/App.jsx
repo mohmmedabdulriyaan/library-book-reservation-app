@@ -12,6 +12,7 @@ import Welcome from "./pages/auth/Welcome";
 import StudentLogin from "./pages/auth/StudentLogin";
 import StudentSignup from "./pages/auth/StudentSignup";
 import AdminLogin from "./pages/auth/AdminLogin";
+import ForgotPassword from "./pages/auth/ForgotPassword";
 
 // Student screens
 import Home from "./pages/student/Home";
@@ -60,6 +61,7 @@ export default function App() {
       <Route path="/welcome" element={<GuestOnly><Welcome /></GuestOnly>} />
       <Route path="/login" element={<GuestOnly><StudentLogin /></GuestOnly>} />
       <Route path="/signup" element={<GuestOnly><StudentSignup /></GuestOnly>} />
+      <Route path="/forgot-password" element={<GuestOnly><ForgotPassword /></GuestOnly>} />
       <Route path="/admin/login" element={<GuestOnly><AdminLogin /></GuestOnly>} />
 
       {/* Student area */}

@@ -69,7 +69,12 @@ export default function StudentLogin() {
             </div>
 
             <div className="mb-4">
-              <label className="form-label">Password</label>
+              <div className="d-flex justify-content-between align-items-baseline">
+                <label className="form-label">Password</label>
+                <Link to="/forgot-password" className="small fw-semibold text-decoration-none">
+                  Forgot password?
+                </Link>
+              </div>
               <PasswordInput value={form.password} onChange={handleChange} autoComplete="current-password" />
             </div>
 
