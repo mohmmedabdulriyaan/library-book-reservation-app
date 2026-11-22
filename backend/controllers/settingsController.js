@@ -10,7 +10,7 @@ const getLibrarySettings = asyncHandler(async (req, res) => {
   res.json({
     defaultLimit: settings.defaultLimit,
     batchLimits: [...settings.batchLimits].sort((a, b) => a.batch - b.batch),
-    emailEnabled: isEmailOn(), // true when SMTP settings are in .env
+    emailEnabled: isEmailOn(), // true when BREVO_API_KEY and EMAIL_FROM are set
   });
 });
 

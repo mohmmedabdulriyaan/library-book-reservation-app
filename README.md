@@ -19,7 +19,7 @@ A college project where students can search and reserve library books, and an ad
 - **E-Library:** PDFs of notes, previous question papers and e-books. The admin uploads them, and students read them in the app.
 - **Announcements:** the admin posts notices and every student gets an alert. Important notices are also emailed.
 - **Borrowing limit by batch:** for example, batch 4 can hold 5 books while the others hold 3.
-- **Email reminders:** due soon, overdue, waitlisted book ready and important notices, sent with Nodemailer (optional).
+- **Email reminders:** due soon, overdue, waitlisted book ready and important notices, plus a welcome email at sign up, sent with Brevo (optional).
 - **Import books from CSV:** add many books at once (Excel: File > Save As > CSV).
 
 **Real covers:** loaded by ISBN from Amazon or Open Library, with a printed-style cover when none exists.
@@ -292,20 +292,19 @@ Set in `backend/config/constants.js`:
 
 ### Email reminders (optional)
 
-The app works without email. To turn it on with Gmail:
+The app works without email. Emails are sent with **Brevo** (free, 300 emails a day). It works on Render's free plan, which blocks Gmail SMTP.
 
-1. Turn on 2-step verification for the Gmail account, then create an **App password** (Google Account > Security > App passwords).
-2. Add these lines to `backend/.env` and restart the backend:
+1. Sign up at **brevo.com**.
+2. **Senders, Domains & Dedicated IPs > Senders > Add a sender**: add your Gmail and click the link Brevo emails you.
+3. Your name (top right) > **SMTP & API > API Keys > Generate a new API key**.
+4. Add these to `backend/.env` (laptop) and to **Render > Environment** (online), then restart:
 
 ```
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=465
-SMTP_USER=yourname@gmail.com
-SMTP_PASS=your16letterapppassword
+BREVO_API_KEY=xkeysib-your-key
 EMAIL_FROM="College Library <yourname@gmail.com>"
 ```
 
-Students get emails only if they added an email address in their profile. **Admin > Profile > Borrowing limits and email** shows whether email is ON.
+New students who give an email get a welcome email. Students with an email also get due-soon, overdue, waitlist and important notice emails. **Admin > Profile > Borrowing limits and email** shows whether email is ON.
 
 ## Test with Postman
 

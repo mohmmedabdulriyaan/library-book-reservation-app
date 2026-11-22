@@ -96,7 +96,7 @@ export default function LibrarySettings() {
             <div className="small text-secondary">
               {emailEnabled
                 ? "Students with an email get due-soon, overdue, waitlist and important notice emails."
-                : "Add SMTP settings (Gmail app password) to backend/.env and restart the backend to turn them on."}
+                : "Add BREVO_API_KEY and EMAIL_FROM (in backend/.env, or Render > Environment online) and restart to turn them on."}
             </div>
           </div>
         </div>
