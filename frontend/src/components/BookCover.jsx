@@ -7,7 +7,7 @@
 //
 // Speed: the picture that worked is remembered in the browser (localStorage),
 // so next time the cover appears at once without trying the other sites again.
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 // Turn a 13-digit ISBN (978...) into the older 10-digit ISBN
 const toIsbn10 = (isbn = "") => {
@@ -60,12 +60,20 @@ export const coverSources = (book) => {
 // First picture address (used where only one link is needed)
 export const coverImageUrl = (book) => coverSources(book)[0] || "";
 
+const NONE_RETRY_MS = 24 * 60 * 60 * 1000; // 1 day
+
 // Sources to try, starting with the one that worked last time
 const sourcesFor = (book) => {
   const all = coverSources(book);
   const id = book.coverUrl || book.isbn;
   const remembered = id ? readCache()[id] : undefined;
-  if (remembered === "none" && !book.coverUrl) return { id, list: [] };
+  // "none" means no site had this cover. Try again after a day, in case the
+  // first try only failed because the internet was slow or offline.
+  if (typeof remembered === "string" && remembered.startsWith("none")) {
+    const when = Number(remembered.split(":")[1]) || 0;
+    if (Date.now() - when < NONE_RETRY_MS && !book.coverUrl) return { id, list: [] };
+    return { id, list: all };
+  }
   if (remembered && all.includes(remembered)) return { id, list: [remembered, ...all.filter((s) => s !== remembered)] };
   return { id, list: all };
 };
@@ -74,30 +82,38 @@ const sourcesFor = (book) => {
 const shortAuthor = (author = "") => author.split(",")[0].trim();
 
 export default function BookCover({ book, style, className = "", eager = false }) {
-  const { id, list } = sourcesFor(book);
-  const key = list.join("|");
-  const [index, setIndex] = useState(0);
-  const [loaded, setLoaded] = useState(false);
+  const bookId = book.coverUrl || book.isbn || book._id || book.title;
 
-  // A different book was passed in: start again from the first picture
-  useEffect(() => {
-    setIndex(0);
-    setLoaded(false);
-  }, [key]);
-
+  // The list of pictures is worked out ONCE per book and then kept.
+  // (Before, it was worked out again on every render. When a picture loaded,
+  // the cache changed the order of the list, the cover reset itself and the
+  // picture stayed hidden until you left the page and came back.)
+  const [state, setState] = useState(() => ({ bookId, ...sourcesFor(book), index: 0, loaded: false }));
+  let current = state;
+  if (state.bookId !== bookId) {
+    // A different book was passed in: start again from the first picture
+    current = { bookId, ...sourcesFor(book), index: 0, loaded: false };
+    setState(current);
+  }
+  const { id, list, index, loaded } = current;
   const src = list[index];
 
   const tryNext = () => {
-    setLoaded(false);
-    if (index + 1 >= list.length && id) saveCache(id, "none"); // no site has this cover
-    setIndex((i) => i + 1);
+    if (index + 1 >= list.length && id) saveCache(id, `none:${Date.now()}`); // no site has this cover
+    setState((s) => (s.bookId === bookId ? { ...s, index: s.index + 1, loaded: false } : s));
   };
 
-  // Some sites send a tiny 1x1 picture instead of an error when they have no cover
-  const handleLoad = (e) => {
-    if (e.target.naturalWidth < 20) return tryNext();
-    setLoaded(true);
+  const showPicture = (img) => {
+    // Some sites send a tiny 1x1 picture instead of an error when they have no cover
+    if (img.naturalWidth < 20) return tryNext();
     if (id) saveCache(id, src);
+    setState((s) => (s.bookId === bookId && !s.loaded ? { ...s, loaded: true } : s));
+  };
+
+  // If the picture was already in the browser cache it can finish loading
+  // before React is listening, so check it as soon as the <img> exists.
+  const checkReady = (img) => {
+    if (img && !loaded && img.complete && img.naturalWidth > 0) showPicture(img);
   };
 
   return (
@@ -121,7 +137,8 @@ export default function BookCover({ book, style, className = "", eager = false }
           fetchpriority={eager ? "high" : "auto"}
           referrerPolicy="no-referrer"
           className={loaded ? "show" : ""}
-          onLoad={handleLoad}
+          ref={checkReady}
+          onLoad={(e) => showPicture(e.currentTarget)}
           onError={tryNext}
         />
       )}
