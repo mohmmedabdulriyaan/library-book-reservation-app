@@ -9,12 +9,42 @@
 //   SMTP_USER=yourname@gmail.com
 //   SMTP_PASS=your16letterapppassword
 //   EMAIL_FROM="College Library <yourname@gmail.com>"
+//
+// ONLINE (Render free plan blocks Gmail SMTP): use Brevo instead. It sends
+// over normal HTTPS, free for 300 emails a day. Put these in Render:
+//   BREVO_API_KEY=xkeysib-....
+//   EMAIL_FROM="College Library <yourname@gmail.com>"   (a sender verified in Brevo)
+// If BREVO_API_KEY is set it is used, otherwise SMTP is used.
 const nodemailer = require("nodemailer");
 
 let transporter = null;
 let warned = false;
 
-const isEmailOn = () => !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+const useBrevo = () => !!process.env.BREVO_API_KEY;
+const isEmailOn = () => useBrevo() || !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+
+// "College Library <me@gmail.com>" -> { name: "College Library", email: "me@gmail.com" }
+const parseFrom = (from) => {
+  const match = String(from || "").match(/^\s*"?([^"<]*)"?\s*<([^>]+)>\s*$/);
+  if (match) return { name: match[1].trim() || "College Library", email: match[2].trim() };
+  return { name: "College Library", email: String(from || "").trim() };
+};
+
+// Send through Brevo's HTTPS API (works on Render's free plan)
+const sendWithBrevo = async ({ to, name, subject, text, html }) => {
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: { "api-key": process.env.BREVO_API_KEY, "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({
+      sender: parseFrom(process.env.EMAIL_FROM || process.env.SMTP_USER),
+      to: [{ email: to, name: name || to }],
+      subject,
+      textContent: text,
+      htmlContent: html,
+    }),
+  });
+  if (!response.ok) throw new Error(`Brevo said ${response.status}: ${await response.text()}`);
+};
 
 const getTransporter = () => {
   if (!transporter) {
@@ -48,19 +78,24 @@ const sendEmail = async (to, name, title, message) => {
   if (!to) return false;
   if (!isEmailOn()) {
     if (!warned) {
-      console.log("Email reminders are off (add SMTP settings to .env to turn them on).");
+      console.log("Email reminders are off (add BREVO_API_KEY or SMTP settings to .env to turn them on).");
       warned = true;
     }
     return false;
   }
+  const email = {
+    to,
+    name,
+    subject: `Library: ${title}`,
+    text: `Hi ${name || "there"},\n\n${title}\n${message}\n\nOpen the Library app to see the details.`,
+    html: buildHtml(name, title, message),
+  };
   try {
-    await getTransporter().sendMail({
-      from: process.env.EMAIL_FROM || process.env.SMTP_USER,
-      to,
-      subject: `Library: ${title}`,
-      text: `Hi ${name || "there"},\n\n${title}\n${message}\n\nOpen the Library app to see the details.`,
-      html: buildHtml(name, title, message),
-    });
+    if (useBrevo()) {
+      await sendWithBrevo(email);
+    } else {
+      await getTransporter().sendMail({ from: process.env.EMAIL_FROM || process.env.SMTP_USER, ...email });
+    }
     return true;
   } catch (error) {
     console.error(`Email to ${to} failed:`, error.message);

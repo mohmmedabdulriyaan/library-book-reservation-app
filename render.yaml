@@ -27,3 +27,6 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
+      # Render's free plan blocks Gmail SMTP, so emails go through Brevo (free)
+      - key: BREVO_API_KEY
+        sync: false

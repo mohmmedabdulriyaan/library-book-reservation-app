@@ -2,6 +2,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const generateToken = require("../utils/generateToken");
 const Student = require("../models/Student");
 const Admin = require("../models/Admin");
+const { sendEmail } = require("../services/email");
 
 // Roll number format: 4 digits + 1 letter + 5 digits (e.g. 2503A51133)
 const ROLL_REGEX = /^[0-9]{4}[A-Z][0-9]{5}$/;
@@ -60,6 +61,16 @@ const registerStudent = asyncHandler(async (req, res) => {
     securityQuestion,
     securityAnswer, // hashed too
   });
+
+  // Welcome email (only if they gave an email). Not awaited, so signup stays fast.
+  if (student.email) {
+    sendEmail(
+      student.email,
+      student.name,
+      "Welcome to the College Library",
+      `Your account is ready. Roll number: ${student.rollNumber}, Batch ${student.batch}. You can now search, reserve and track library books. You will also get reminders here before your books are due.`
+    );
+  }
 
   res.status(201).json({
     message: "Account created",
