@@ -21,6 +21,11 @@ A college project where students can search and reserve library books, and an ad
 - **Borrowing limit by batch:** for example, batch 4 can hold 5 books while the others hold 3.
 - **Email reminders:** due soon, overdue, waitlisted book ready and important notices, plus a welcome email at sign up, sent with Brevo (optional).
 - **Import books from CSV:** add many books at once (Excel: File > Save As > CSV).
+- **Ratings and reviews:** after returning a book, a student can give it 1 to 5 stars and a short review. Book tiles show the average stars. The admin can delete rude reviews.
+- **QR scan at the desk:** in Reservations, the admin taps **Scan** and points the phone or laptop camera at the student's pickup QR code, and the book is issued.
+- **You may also like / Recommended for you:** the book page suggests books by the same author or category, and Home recommends books based on what the student borrowed and saved.
+- **Add book by ISBN:** in Add book, type the ISBN and tap **Fetch**. The title, author, category, description and cover fill in from Google Books (or Open Library).
+- **Monthly PDF report:** on the Dashboard, pick a month and download a PDF with loans, returns, fines, most borrowed books, borrowing by category and batch, top readers, overdue books and best rated books.
 
 **Real covers:** loaded by ISBN from Amazon or Open Library, with a printed-style cover when none exists.
 
@@ -217,6 +222,12 @@ Base URL: `http://localhost:5000/api`
 | POST | `/books` | Admin | Add a book |
 | PUT | `/books/:id` | Admin | Edit a book (changing `totalCopies` also fixes `availableCopies`) |
 | DELETE | `/books/:id` | Admin | Delete a book (not allowed while someone has it) |
+| GET | `/books/:id/reviews` | Anyone | Reviews of a book, average stars and a 5 to 1 star breakdown |
+| POST | `/books/:id/reviews` | Student | Rate a book you returned `{ rating: 1-5, comment }` (sending again updates your review) |
+| DELETE | `/books/:id/reviews/:reviewId` | Student / Admin | Delete your own review (admin: any review) |
+| GET | `/books/:id/similar` | Anyone | "You may also like": same author first, then same category |
+| GET | `/books/recommended` | Student | "Recommended for you", based on the books you borrowed and saved |
+| GET | `/books/lookup/:isbn` | Admin | Book details from Google Books / Open Library for "Add book by ISBN" |
 
 ### Reservations (student)
 
@@ -289,6 +300,7 @@ Set in `backend/config/constants.js`:
 | GET | `/resources/:id/file` | Anyone | Open the PDF |
 | POST | `/resources` | Admin | Upload a PDF, max 15 MB (form-data: `file`, `title`, `type`, `subject`, `year`, `description`) |
 | DELETE | `/resources/:id` | Admin | Delete a PDF |
+| GET | `/admin/report?month=2026-11` | Admin | Monthly report as a PDF file |
 
 ### Email reminders (optional)
 

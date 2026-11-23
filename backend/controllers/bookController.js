@@ -4,6 +4,7 @@ const Book = require("../models/Book");
 const Reservation = require("../models/Reservation");
 const Waitlist = require("../models/Waitlist");
 const Wishlist = require("../models/Wishlist");
+const Review = require("../models/Review");
 const { fillFromWaitlist } = require("../services/library");
 
 // @route  GET /api/books
@@ -207,6 +208,7 @@ const deleteBook = asyncHandler(async (req, res) => {
   await Reservation.deleteMany({ book: book._id }); // old history for this book
   await Waitlist.deleteMany({ book: book._id });
   await Wishlist.deleteMany({ book: book._id });
+  await Review.deleteMany({ book: book._id });
   await book.deleteOne();
   res.json({ message: "Book deleted" });
 });

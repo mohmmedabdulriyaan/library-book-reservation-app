@@ -5,6 +5,8 @@ import { useToast } from "../../context/ToastContext";
 import StatusBadge from "../../components/StatusBadge";
 import EmptyState from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
+import Modal from "../../components/Modal";
+import QrScanner from "../../components/QrScanner";
 import { downloadCsv } from "../../utils/csv";
 import { formatDate } from "../../utils/format";
 
@@ -42,6 +44,7 @@ export default function Reservations() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
+  const [scanning, setScanning] = useState(false); // camera QR scanner open?
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(text.trim()), 300);
@@ -76,12 +79,12 @@ export default function Reservations() {
     }
   };
 
-  const issueByCode = async (e) => {
-    e.preventDefault();
-    if (!code.trim()) return;
+  // Typed code or scanned QR code -> issue the book
+  const issueCode = async (value) => {
+    if (!value.trim()) return;
     setBusyId("code");
     try {
-      const { data } = await api.post("/admin/reservations/issue-by-code", { code: code.trim() });
+      const { data } = await api.post("/admin/reservations/issue-by-code", { code: value.trim() });
       toast.success(data.message);
       setCode("");
       load();
@@ -90,6 +93,17 @@ export default function Reservations() {
     } finally {
       setBusyId(null);
     }
+  };
+
+  const issueByCode = (e) => {
+    e.preventDefault();
+    issueCode(code);
+  };
+
+  const handleScan = (text) => {
+    setScanning(false);
+    setCode(text.toUpperCase());
+    issueCode(text);
   };
 
   const exportCsv = () => {
@@ -174,10 +188,20 @@ export default function Reservations() {
           maxLength={6}
           aria-label="Pickup code"
         />
+        <button type="button" className="btn btn-soft text-nowrap" onClick={() => setScanning(true)} title="Scan the student's QR code">
+          <i className="bi bi-camera"></i>
+          <span className="d-none d-sm-inline ms-1">Scan</span>
+        </button>
         <button className="btn btn-primary text-nowrap" disabled={busyId === "code"}>
           {busyId === "code" ? <span className="spinner-border spinner-border-sm"></span> : "Issue book"}
         </button>
       </form>
+
+      {scanning && (
+        <Modal title="Scan pickup QR" onClose={() => setScanning(false)} width={420}>
+          <QrScanner onScan={handleScan} />
+        </Modal>
+      )}
 
       <div className="chip-scroll mb-3">
         {FILTERS.map((f) => (

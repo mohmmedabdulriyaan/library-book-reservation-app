@@ -55,6 +55,15 @@ const bookSchema = new mongoose.Schema(
       type: String,
       default: "bi-book",
     },
+    // Average stars from student reviews (worked out again after every review)
+    ratingAvg: {
+      type: Number,
+      default: 0,
+    },
+    ratingCount: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

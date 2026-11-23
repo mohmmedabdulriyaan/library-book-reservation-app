@@ -6,6 +6,7 @@ import QuickLinks from "../../components/QuickLinks";
 import StatusBadge from "../../components/StatusBadge";
 import EmptyState from "../../components/EmptyState";
 import { SkeletonStats } from "../../components/Skeleton";
+import MonthlyReport from "../../components/MonthlyReport";
 
 // Simple horizontal bar chart made with plain HTML/CSS
 function BarChart({ items, emptyText }) {
@@ -85,6 +86,10 @@ export default function Dashboard() {
             </Link>
           </div>
         ))}
+      </div>
+
+      <div className="mt-3">
+        <MonthlyReport />
       </div>
 
       <div className="row g-3 mt-1">

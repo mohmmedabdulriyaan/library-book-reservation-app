@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api, { getErrorMessage } from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
 import BookTile from "../../components/BookTile";
+import BookRow from "../../components/BookRow";
 import QuickLinks from "../../components/QuickLinks";
 import { SkeletonBlock } from "../../components/Skeleton";
 
@@ -19,6 +20,7 @@ export default function Home() {
   const [categories, setCategories] = useState([]);
   const [myReservations, setMyReservations] = useState([]);
   const [notice, setNotice] = useState(null); // newest announcement (if it is recent)
+  const [recommended, setRecommended] = useState({ basedOn: "", books: [] }); // "Recommended for you"
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -35,6 +37,12 @@ export default function Home() {
       })
       .catch((err) => setError(getErrorMessage(err)))
       .finally(() => setLoading(false));
+
+    // Suggestions based on what I borrowed and saved (the page still works if this fails)
+    api
+      .get("/books/recommended")
+      .then(({ data }) => setRecommended(data))
+      .catch(() => {});
 
     // Newest library notice from the last 7 days (the page still works if this fails)
     api
@@ -125,6 +133,20 @@ export default function Home() {
               </Link>
             ))}
           </div>
+
+          {recommended.books.length > 0 && (
+            <>
+              <div className="section-head">
+                <div>
+                  <h2>{recommended.basedOn === "history" ? "Recommended for you" : "Popular with students"}</h2>
+                  <div className="small text-secondary">
+                    {recommended.basedOn === "history" ? "Based on books you borrowed and saved" : "Top rated books to start with"}
+                  </div>
+                </div>
+              </div>
+              <BookRow books={recommended.books} />
+            </>
+          )}
 
           <div className="section-head">
             <h2>New in the library</h2>

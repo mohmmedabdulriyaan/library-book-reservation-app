@@ -13,6 +13,7 @@ const {
   resetStudentPassword,
 } = require("../controllers/adminController");
 const { getLibrarySettings, updateLibrarySettings } = require("../controllers/settingsController");
+const { getMonthlyReport } = require("../controllers/reportController");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 
 const router = express.Router();
@@ -21,6 +22,7 @@ const router = express.Router();
 router.use(protect, adminOnly);
 
 router.get("/stats", getStats);
+router.get("/report", getMonthlyReport); // monthly PDF report, ?month=2026-11
 
 router.get("/reservations", getAllReservations);
 router.post("/reservations/issue-by-code", issueByCode);

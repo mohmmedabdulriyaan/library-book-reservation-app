@@ -6,6 +6,9 @@ import BookCover from "../../components/BookCover";
 import StatusBadge from "../../components/StatusBadge";
 import Loader from "../../components/Loader";
 import PickupCode from "../../components/PickupCode";
+import BookReviews from "../../components/BookReviews";
+import BookRow from "../../components/BookRow";
+import Stars from "../../components/Stars";
 import { dueText, formatDate } from "../../utils/format";
 
 export default function BookDetails() {
@@ -17,6 +20,8 @@ export default function BookDetails() {
   const [myReservation, setMyReservation] = useState(null); // active reservation of this book, if any
   const [myWait, setMyWait] = useState(null); // my waitlist entry for this book, if any
   const [saved, setSaved] = useState(false); // is this book in my wishlist?
+  const [hasReturned, setHasReturned] = useState(false); // borrowed and returned before? (then I can review it)
+  const [similar, setSimilar] = useState([]); // "You may also like"
   const [loading, setLoading] = useState(true);
   const [reserving, setReserving] = useState(false);
   const [error, setError] = useState("");
@@ -31,9 +36,17 @@ export default function BookDetails() {
           (r) => r.book && r.book._id === id && (r.status === "reserved" || r.status === "issued")
         );
         setMyReservation(active || null);
+        setHasReturned(myRes.data.reservations.some((r) => r.book && r.book._id === id && r.status === "returned"));
       })
       .catch((err) => setError(getErrorMessage(err)))
       .finally(() => setLoading(false));
+
+    // Suggestions load on their own (the page still works if this fails)
+    setSimilar([]);
+    api
+      .get(`/books/${id}/similar`)
+      .then(({ data }) => setSimilar(data.books))
+      .catch(() => {});
   }, [id]);
 
   const handleReserve = async () => {
@@ -118,7 +131,18 @@ export default function BookDetails() {
             </button>
           </div>
           <h1 className="h4 fw-bold mt-2 mb-1">{book.title}</h1>
-          <p className="text-secondary mb-3">{book.author}</p>
+          <p className="text-secondary mb-2">{book.author}</p>
+          {book.ratingCount > 0 ? (
+            <a href="#reviews" className="d-inline-flex align-items-center gap-2 small text-decoration-none mb-3">
+              <Stars value={book.ratingAvg} />
+              <span className="fw-semibold text-body">{book.ratingAvg.toFixed(1)}</span>
+              <span className="text-secondary">
+                ({book.ratingCount} review{book.ratingCount > 1 ? "s" : ""})
+              </span>
+            </a>
+          ) : (
+            <div className="small text-secondary mb-3">No ratings yet</div>
+          )}
 
           <div className="app-card info-grid py-3 mb-3">
             <div>
@@ -218,6 +242,25 @@ export default function BookDetails() {
           </div>
         </div>
       </div>
+
+      <div id="reviews">
+        <BookReviews
+          bookId={id}
+          canReview={hasReturned}
+          onRatingChange={(ratingAvg, ratingCount) =>
+            setBook((b) => (b && (b.ratingAvg !== ratingAvg || b.ratingCount !== ratingCount) ? { ...b, ratingAvg, ratingCount } : b))
+          }
+        />
+      </div>
+
+      {similar.length > 0 && (
+        <>
+          <div className="section-head">
+            <h2>You may also like</h2>
+          </div>
+          <BookRow books={similar} />
+        </>
+      )}
     </div>
   );
 }

@@ -1420,3 +1420,63 @@ input[type="number"] {
 .upload-drop > .bi { font-size: 1.8rem; color: var(--primary); }
 .seg { overflow-x: auto; }
 .seg button { white-space: nowrap; }
+
+/* ---------- Ratings, suggestions, QR scanner, report ---------- */
+:root { --star: #f59e0b; }
+.stars { color: var(--star); display: inline-flex; gap: 2px; white-space: nowrap; }
+.tile-rating {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--star);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.star-picker { display: inline-flex; gap: 4px; }
+.star-picker button {
+  border: 0;
+  background: none;
+  padding: 2px;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.star-picker button.on { color: var(--star); }
+.star-picker button:hover { transform: scale(1.12); }
+
+/* Sideways scrolling row of books ("You may also like") */
+.book-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+.book-row-item {
+  flex: 0 0 calc((100% - 24px) / 3.3); /* 3 and a bit visible on phones */
+  scroll-snap-align: start;
+}
+@media (min-width: 768px) {
+  .book-row { gap: 18px; }
+  .book-row-item { flex-basis: calc((100% - 72px) / 4.4); }
+}
+@media (min-width: 992px) {
+  .book-row-item { flex-basis: calc((100% - 90px) / 6); }
+}
+
+/* Camera box for scanning pickup QR codes */
+.qr-reader {
+  width: 100%;
+  min-height: 240px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+.qr-reader video { width: 100% !important; display: block; }
+
+/* ISBN lookup button inside the book form */
+.isbn-row .btn { white-space: nowrap; }

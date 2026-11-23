@@ -3,7 +3,7 @@
 // 2. Creates the default admin (if missing)
 // 3. Creates 12 demo students with reservations, issued books, due dates,
 //    fines and waitlist entries, so the app has realistic data to show.
-// 4. Adds announcements, book requests, wishlists, sample PDFs for the
+// 4. Adds announcements, book requests, wishlists, reviews, sample PDFs for the
 //    digital library and borrowing limits for each batch.
 // Students you created yourself are kept (only their old reservations are cleared).
 const dotenv = require("dotenv");
@@ -20,6 +20,9 @@ const Announcement = require("../models/Announcement");
 const BookRequest = require("../models/BookRequest");
 const Resource = require("../models/Resource");
 const Setting = require("../models/Setting");
+const Review = require("../models/Review");
+const { updateBookRating } = require("../controllers/reviewController");
+const demoReviews = require("./reviews");
 const extras = require("./extras");
 const makePdf = require("./samplePdf");
 const books = require("./books");
@@ -82,6 +85,7 @@ const seed = async () => {
   await Reservation.deleteMany({});
   await Waitlist.deleteMany({});
   await Wishlist.deleteMany({});
+  await Review.deleteMany({});
   await Announcement.deleteMany({});
   await BookRequest.deleteMany({});
   await Notification.deleteMany({});
@@ -211,11 +215,41 @@ const seed = async () => {
     });
   }
 
+  // Ratings and reviews (each one needs a returned loan of that book)
+  const pastLoans = [];
+  const reviewDocs = [];
+  for (const r of demoReviews) {
+    const student = studentByRoll[r.roll];
+    const book = bookByTitle[r.book];
+    if (!student || !book) continue;
+    const hasReturned = reservations.some(
+      (x) => String(x.student) === String(student._id) && String(x.book) === String(book._id) && x.status === "returned"
+    );
+    if (!hasReturned) {
+      const issuedAt = daysAgo(r.daysAgo);
+      pastLoans.push({
+        student: student._id,
+        book: book._id,
+        status: "returned",
+        reservedAt: new Date(issuedAt.getTime() - DAY),
+        createdAt: new Date(issuedAt.getTime() - DAY),
+        issuedAt,
+        dueDate: new Date(issuedAt.getTime() + LOAN_DAYS * DAY),
+        returnedAt: daysAgo(r.daysAgo - 10),
+      });
+    }
+    reviewDocs.push({ student: student._id, book: book._id, rating: r.stars, comment: r.comment, createdAt: daysAgo(r.daysAgo - 11) });
+  }
+  await Reservation.insertMany(pastLoans);
+  await Review.insertMany(reviewDocs);
+  const reviewedBooks = new Map(reviewDocs.map((r) => [String(r.book), r.book]));
+  for (const bookId of reviewedBooks.values()) await updateBookRating(bookId);
+
   // Borrowing limits
   await Setting.findOneAndUpdate({ name: "library" }, { name: "library", ...extras.limits }, { upsert: true });
 
   console.log(
-    `Added ${posted.length} announcements, ${extras.requests.length} book requests, ${wish.length} wishlist items, ${extras.resources.length} sample PDFs and batch limits`
+    `Added ${posted.length} announcements, ${extras.requests.length} book requests, ${wish.length} wishlist items, ${reviewDocs.length} reviews, ${extras.resources.length} sample PDFs and batch limits`
   );
 
   console.log("\nSeeding finished.");
