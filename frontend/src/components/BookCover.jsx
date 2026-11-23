@@ -44,15 +44,27 @@ const saveCache = (id, value) => {
   }
 };
 
-// All picture addresses we can try for a book
+// Ask for the BIG version of a saved cover link, so it stays sharp
+const hdLink = (url) => {
+  // Google Books thumbnails are tiny (128px): ask for an 800px wide picture
+  if (/books\.google|googleusercontent/.test(url)) {
+    return url.replace("http://", "https://").replace(/&edge=curl/g, "").replace(/&fife=[^&]*/g, "") + "&fife=w800";
+  }
+  // Open Library: -S / -M (small / medium) -> -L (large)
+  if (url.includes("covers.openlibrary.org")) return url.replace(/-[SM]\.jpg/, "-L.jpg");
+  return url;
+};
+
+// All picture addresses we can try for a book (large, HD versions)
 export const coverSources = (book) => {
   const list = [];
-  if (book.coverUrl) list.push(book.coverUrl);
+  if (book.coverUrl) list.push(hdLink(book.coverUrl));
   if (book.isbn) {
     const isbn = book.isbn.replace(/[^0-9X]/gi, "");
     const isbn10 = toIsbn10(isbn);
-    if (isbn10) list.push(`https://images-na.ssl-images-amazon.com/images/P/${isbn10}.01.MZZZZZZZ.jpg`);
-    list.push(`https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false`);
+    // LZZZZZZZ = Amazon's large picture (about 500px tall, sharp even on phones)
+    if (isbn10) list.push(`https://images-na.ssl-images-amazon.com/images/P/${isbn10}.01.LZZZZZZZ.jpg`);
+    list.push(`https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`);
   }
   return list;
 };
