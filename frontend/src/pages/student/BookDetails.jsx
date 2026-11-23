@@ -196,7 +196,7 @@ export default function BookDetails() {
               </div>
               {myReservation.status === "reserved" && (
                 <div className="mt-3">
-                  <PickupCode code={myReservation.pickupCode} pickupBy={myReservation.pickupBy} />
+                  <PickupCode code={myReservation.pickupCode} pickupBy={myReservation.pickupBy} bookTitle={book.title} />
                 </div>
               )}
               </>

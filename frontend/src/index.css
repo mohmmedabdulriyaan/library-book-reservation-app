@@ -840,6 +840,76 @@ body {
   color: var(--primary);
 }
 
+/* Pickup box is a button: tap it to open the full screen QR */
+button.pickup-box {
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+button.pickup-box:active { transform: scale(0.98); }
+.pickup-enlarge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pickup-enlarge i { font-size: 1.15rem; }
+
+/* Full screen QR: white background and a big code so any camera can scan it */
+.qr-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: #fff;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  animation: qrIn 0.15s ease-out;
+}
+@keyframes qrIn { from { opacity: 0; } to { opacity: 1; } }
+.qr-fullscreen-close {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  background: #f3f4f6;
+  color: #111827;
+  font-size: 1.1rem;
+}
+.qr-fullscreen-body {
+  width: min(88vw, 70vh, 520px);
+  text-align: center;
+}
+.qr-fullscreen-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qr-fullscreen-code-box { line-height: 0; }
+.qr-fullscreen-code {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: clamp(1.8rem, 9vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  margin-top: 16px;
+  padding-left: 0.25em; /* balances the letter spacing so it looks centred */
+}
+.qr-fullscreen-hint { color: #4b5563; margin-top: 6px; }
+.qr-fullscreen-tip { color: #6b7280; font-size: 0.8rem; margin-top: 14px; }
+
 /* Bar charts */
 .bar-row { margin-bottom: 12px; }
 .bar-track {
